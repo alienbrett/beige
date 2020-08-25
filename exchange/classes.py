@@ -1,4 +1,4 @@
-import time
+import time as t
 from enum import Enum
 from decimal import *
 
@@ -30,7 +30,7 @@ def Limit(price:float):
 def Order ( instrument:str, type_:dict, side:Side, quantity:int, time=None ):
 
 	if time is None:
-		time = time.time()
+		time = t.time()
 	else:
 		time = float(time)
 
