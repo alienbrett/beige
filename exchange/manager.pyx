@@ -45,16 +45,17 @@ class OrderManager:
 		if o['status'] == 'cancelled':
 			raise ValueError("Order cannot be filled- it was previously cancelled")
 
+		# print("Px:",px)
 		# Calculate new info about order
 		remaining = o['qty'] - o['filled']
-		newqty = o['qty'] + qty
+		newqty = o['filled'] + qty
 		o['averagepx'] = (o['averagepx'] * o['filled'] + qty * px) / newqty
 		o['filled'] = newqty
 		o['filledtime'] = time.time()
 
 		result = None
 		# Test whether this order is done
-		if newqty < o['qty']:
+		if remaining > qty :
 			# Still open
 			o['status'] = 'partial'
 			result = True
@@ -63,6 +64,7 @@ class OrderManager:
 			o['status'] = 'filled'
 			result = False
 
+		# print(o)
 		# Add it back to the storage
 		self.put(orderid, o)
 		return result

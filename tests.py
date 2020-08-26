@@ -23,7 +23,7 @@ class TestOrders ( unittest.TestCase ):
 
 		
 	def test_orders ( self ):
-		print("Testing orders")
+		# print("Testing orders")
 		self.assertEqual (
 			Order(
 				'spy',
@@ -93,6 +93,7 @@ class TestEngine ( unittest.TestCase ):
 
 		txs =  [ { k:v for k,v in tx.items() if k != 'time' } for tx in eng.piston(sym)().txs ]
 
+		# print(txs)
 		i = 0
 		for price, sizes in prices:
 			for qty in sizes:
@@ -132,6 +133,7 @@ class TestEngine ( unittest.TestCase ):
 	def test_partial ( self ):
 		"""Ensure that orders are marked as partial correctly
 		"""
+		# print("Test partial")
 		sym = 'SPY'
 		eng = Engine()
 
@@ -152,17 +154,77 @@ class TestEngine ( unittest.TestCase ):
 				sym,
 				Limit(8),
 				Side.Sell,
-				11
+				12
 			),
 		]
 
+		# ids = [ eng.submit(o) for o in orders ]
+		ids = []
 		for o in orders:
-			eng.submit(o)
+			ids.append(eng.submit(o))
+			# print(eng.piston(sym)().book)
+			# print(eng.status(ids[-1]))
 
-			print( eng.piston(sym)()._manager._orders)
 
+		corrects = [
+			{'status': 'filled',  'filled': 10, 'averagepx': Decimal('8.0000')},
+			{'status': 'partial', 'filled': 2, 'averagepx': Decimal('8.0000')},
+			{'status': 'filled',  'filled': 12, 'averagepx': Decimal('8.0000')},
+		]
+		
+		for oid, valid in zip(ids,corrects):
+			self.assertEqual(
+				{ k:v for k,v in eng.status(oid).items() if k in ('status','filled','averagepx') },
+				valid
+			)
+	
 
+	def test_market (self):
+		"""Test placement of market orders
+		"""
+		# print("Test market")
+		sym = 'SPY'
+		eng = Engine()
 
+		orders = [
+			Order (
+				sym,
+				Limit(10),
+				Side.Buy,
+				10
+			),
+			Order (
+				sym,
+				Limit(8),
+				Side.Buy,
+				10
+			),
+			Order (
+				sym,
+				Market(),
+				Side.Sell,
+				12
+			),
+		]
+
+		# ids = [ eng.submit(o) for o in orders ]
+		ids = []
+		for o in orders:
+			ids.append(eng.submit(o))
+			# print(eng.piston(sym)().book)
+			# print(eng.status(ids[-1]))
+
+		corrects = [
+			{'status': 'filled',  'filled': 10, 'averagepx': Decimal('10.0000')},
+			{'status': 'partial', 'filled': 2, 'averagepx': Decimal('8.0000')},
+			{'status': 'filled',  'filled': 12, 'averagepx': Decimal('9.667')},
+		]
+		
+		for oid, valid in zip(ids,corrects):
+			self.assertEqual(
+				{ k:v for k,v in eng.status(oid).items() if k in ('status','filled','averagepx') },
+				valid
+			)
 
 
 
