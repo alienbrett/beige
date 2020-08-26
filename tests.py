@@ -1,4 +1,6 @@
 import unittest
+import time
+import random
 from decimal import *
 from exchange import *
 
@@ -21,20 +23,19 @@ class TestOrders ( unittest.TestCase ):
 
 		
 	def test_orders ( self ):
+		print("Testing orders")
 		self.assertEqual (
 			Order(
 				'spy',
 				Market(),
 				Side.Buy,
 				100,
-				time=0,
 			),
 			{
 				'price': {'type':'market'},
 				'sym': 'SPY',
 				'qty': 100,
 				'side': Side.Buy,
-				'time': 0,
 			}
 		)
 
@@ -43,34 +44,196 @@ class TestOrders ( unittest.TestCase ):
 				'',
 				Limit(1/3.0),
 				Side.Sell,
-				0,
-				time=0,
+				0
 			),
 			{
 				'price': {'type':'limit','price':Decimal('0.3333')},
 				'sym': '',
 				'qty': 0,
 				'side': Side.Sell,
-				'time': 0,
 			}
 		)
 
 
 
 
-class TestPistons ( unittest.TestCase ):
+class TestEngine ( unittest.TestCase ):
 
 	def test_sym (self):
+		eng = Engine()
 		for test, correct in [
 			('eur','EUR'),
 			('blahBlah','BLAHBLAH'),
 			('AAAA','AAAA'),
 			('','')
 		]:
-			p = Piston(test)
-			self.assertEqual(p.sym, correct)
+			self.assertEqual(eng.piston(test)().sym, correct)
+	
+	def test_basic_execution (self):
+		sym = 'SPY'
+		eng = Engine()
+
+		prices = [
+			(15, (100,200,1)),
+			(20, (99,1,18)),
+			(21, (101,3,42)),
+		]
+
+		for price, sizes in prices:
+			for quantity in sizes:
+				for side in [Side.Buy,Side.Sell]:
+					eng.submit(
+						Order(
+							sym,
+							Limit(price),
+							side,
+							quantity
+						)
+					)
+
+		txs =  [ { k:v for k,v in tx.items() if k != 'time' } for tx in eng.piston(sym)().txs ]
+
+		i = 0
+		for price, sizes in prices:
+			for qty in sizes:
+				self.assertEqual(
+					txs[i]['px'],
+					Decimal(price)
+				)
+				self.assertEqual(
+					txs[i]['qty'],
+					qty
+				)
+				i += 1
 	
 
+	def test_cancel (self):
+		sym = 'SPY'
+		eng = Engine()
+		self.assertEqual ( len(eng.piston(sym)()._manager._orders), 0 )
+		o = Order( sym, Limit(100), Side.Sell, 1 )
+		orderid = eng.submit(o)
+
+		# print(orderid)
+
+		self.assertEqual ( len(eng.piston(sym)()._manager._orders), 1 )
+
+		# print(eng.status(orderid))
+
+		eng.cancel(orderid)
+		self.assertEqual (
+			eng.piston(sym)()._manager._orders[orderid]['status'],
+			'cancelled'
+		)
+		self.assertEqual ( len(eng.piston(sym)()._manager._orders), 1 )
+	
+
+
+	def test_partial ( self ):
+		"""Ensure that orders are marked as partial correctly
+		"""
+		sym = 'SPY'
+		eng = Engine()
+
+		orders = [
+			Order (
+				sym,
+				Limit(10),
+				Side.Buy,
+				10
+			),
+			Order (
+				sym,
+				Limit(8),
+				Side.Buy,
+				10
+			),
+			Order (
+				sym,
+				Limit(8),
+				Side.Sell,
+				11
+			),
+		]
+
+		for o in orders:
+			eng.submit(o)
+
+			print( eng.piston(sym)()._manager._orders)
+
+
+
+
+
+
+
+
+class TestLattice ( unittest.TestCase ):
+	
+	def test_insert (self):
+		l = lattice.Lattice()
+
+		# print("testing insert")
+		t1 = time.time()
+		n = 10*1000
+		k = 900
+		for i in range(n):
+			i = (i ** k) % n
+			x = i % k
+			y = i // k
+			l.insert(x,y,(x,y))
+		t2 = time.time()
+		print("Lattice Insert: {0:,.0f} loops, {1:.3f} us per insert".format(n*1.0,1000*1000*(t2-t1)/n))
+
+		vals = [ x for x in l ]
+		self.assertTrue(
+			all(vals[i] <= vals[i+1] for i in range(len(vals) - 1))
+		)
+	
+
+
+	def test_get (self):
+		l = lattice.Lattice()
+		
+		vals = [
+			(x,y, x*10+y)
+			for x in range(100)
+			for y in range(10)
+		]
+
+		for x,y,z in vals:
+			l.insert(x,y,z)
+
+		random.shuffle(vals)
+
+		for x,y,z in vals:
+			self.assertEqual(
+				l.get(x,y),
+				z
+			)
+
+
+
+	def test_pop (self):
+		l = lattice.Lattice()
+		
+		vals = [
+			(x,y, x*10+y)
+			for x in range(100)
+			for y in range(10)
+		]
+
+		for x,y,z in vals:
+			l.insert(x,y,z)
+
+		random.shuffle(vals)
+
+		for x,y,z in vals:
+			self.assertEqual(
+				l.pop(x,y),
+				z
+			)
+		self.assertEqual(0, len(l))
 
 
 

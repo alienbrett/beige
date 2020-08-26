@@ -27,18 +27,12 @@ def Limit(price:float):
 	}
 
 
-def Order ( instrument:str, type_:dict, side:Side, quantity:int, time=None ):
-
-	if time is None:
-		time = t.time()
-	else:
-		time = float(time)
+def Order ( instrument:str, type_:dict, side:Side, quantity:int ):
 
 	assert isinstance(instrument,str)
 	assert isinstance(type_,dict)
 	assert isinstance(side,Side)
 	assert isinstance(quantity,int)
-	assert isinstance(time, float)
 	instrument = instrument.upper()
 
 	return {
@@ -46,5 +40,4 @@ def Order ( instrument:str, type_:dict, side:Side, quantity:int, time=None ):
 		'price': type_,
 		'side': side,
 		'qty': quantity,
-		'time': time,
 	}
