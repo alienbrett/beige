@@ -1,4 +1,5 @@
 import unittest
+import numpy as np
 import time
 import random
 from decimal import *
@@ -30,12 +31,14 @@ class TestOrders ( unittest.TestCase ):
 				Market(),
 				Side.Buy,
 				100,
+				entity='a',
 			),
 			{
 				'price': {'type':'market'},
 				'sym': 'SPY',
 				'qty': 100,
 				'side': Side.Buy,
+				'acct': 'A'
 			}
 		)
 
@@ -44,15 +47,78 @@ class TestOrders ( unittest.TestCase ):
 				'',
 				Limit(1/3.0),
 				Side.Sell,
-				0
+				0,
+				entity='',
 			),
 			{
 				'price': {'type':'limit','price':Decimal('0.3333')},
 				'sym': '',
 				'qty': 0,
 				'side': Side.Sell,
+				'acct': ''
 			}
 		)
+
+
+
+class TestAccountManager ( unittest.TestCase ):
+	def test_add ( self ):
+		'''Can we move assets into and out of an account correctly
+		'''
+		act = AccountManager()
+
+		# Give him 10 dollars to start
+		act.init('meme', {'$': 10})
+
+		for sym, qty, px, correct in (
+
+			# Buy 10 SPY for $1 a piece
+			('spy', 10, 1.0, np.array([0, 10])),
+
+			# Short 99 AMD for $8 a piece
+			('amd', -99, 8, np.array([792.0, -99.0, 10.0])),
+
+			# Buy 10 AMD for 0.0
+			('amd', 10, 0, np.array([792.0, -89.0, 10.0])),
+
+		):
+			act.tx('meme', sym, qty, px)
+
+			self.assertTrue(
+				np.all( act.df.values == correct )
+			)
+	
+
+
+	def test_tx ( self ):
+		"""Do assets actually flow between accounts correctly
+		"""
+
+		act = AccountManager()
+
+		# Give him 10 dollars to start
+		act.init('uncle sam', {'$': -100*100, 'roads': 100, 'social security': 2})
+		act.init('tax payer', {'$': 10})
+
+		for sym, qty, px, correct in (
+
+			# Tax the taxpayer $3, but give him 1 roads
+			('roads', 1, 3, np.array([[-9997, 99, 2], [7, 1, 0]])),
+
+			# Tax the taxpayer $5, but give him 5 social securities
+			('social security', 5, 1, np.array([[-9992, 99, -3], [2, 1, 5]])),
+		):
+			act.exchange (
+				'tax payer',
+				'uncle sam',
+				sym, qty, px
+			)
+			# print(act.df)
+			# print(act.df.values)
+
+			self.assertTrue(
+				np.all( act.df.values == correct )
+			)
 
 
 
@@ -87,13 +153,14 @@ class TestEngine ( unittest.TestCase ):
 							sym,
 							Limit(price),
 							side,
-							quantity
+							quantity,
+							entity=('A' if side == Side.Buy else 'B'),
 						)
 					)
 
 		txs =  [ { k:v for k,v in tx.items() if k != 'time' } for tx in eng.piston(sym)().txs ]
+		print(eng.accounts.df)
 
-		# print(txs)
 		i = 0
 		for price, sizes in prices:
 			for qty in sizes:
@@ -112,21 +179,20 @@ class TestEngine ( unittest.TestCase ):
 		sym = 'SPY'
 		eng = Engine()
 		self.assertEqual ( len(eng.piston(sym)()._manager._orders), 0 )
-		o = Order( sym, Limit(100), Side.Sell, 1 )
+		o = Order( sym, Limit(100), Side.Sell, 1, entity='A' )
 		orderid = eng.submit(o)
 
-		# print(orderid)
-
 		self.assertEqual ( len(eng.piston(sym)()._manager._orders), 1 )
-
-		# print(eng.status(orderid))
 
 		eng.cancel(orderid)
 		self.assertEqual (
-			eng.piston(sym)()._manager._orders[orderid]['status'],
+			eng.status(orderid)['status'],
 			'cancelled'
 		)
 		self.assertEqual ( len(eng.piston(sym)()._manager._orders), 1 )
+
+
+
 	
 
 
@@ -142,19 +208,22 @@ class TestEngine ( unittest.TestCase ):
 				sym,
 				Limit(10),
 				Side.Buy,
-				10
+				10,
+				entity='A',
 			),
 			Order (
 				sym,
 				Limit(8),
 				Side.Buy,
-				10
+				10,
+				entity='A',
 			),
 			Order (
 				sym,
 				Limit(8),
 				Side.Sell,
-				12
+				12,
+				entity='B',
 			),
 		]
 
@@ -162,8 +231,6 @@ class TestEngine ( unittest.TestCase ):
 		ids = []
 		for o in orders:
 			ids.append(eng.submit(o))
-			# print(eng.piston(sym)().book)
-			# print(eng.status(ids[-1]))
 
 
 		corrects = [
@@ -191,19 +258,22 @@ class TestEngine ( unittest.TestCase ):
 				sym,
 				Limit(10),
 				Side.Buy,
-				10
+				10,
+				entity='A',
 			),
 			Order (
 				sym,
 				Limit(8),
 				Side.Buy,
-				10
+				10,
+				entity='A',
 			),
 			Order (
 				sym,
 				Market(),
 				Side.Sell,
-				12
+				12,
+				entity='B',
 			),
 		]
 

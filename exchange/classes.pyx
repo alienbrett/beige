@@ -27,17 +27,22 @@ def Limit(price:float):
 	}
 
 
-def Order ( instrument:str, type_:dict, side:Side, quantity:int ):
-
+def Order ( instrument:str, type_:dict, side:Side, quantity:int, entity:str ):
+	"""Create an order
+	entity and instrument are case insensitive
+	"""
 	assert isinstance(instrument,str)
 	assert isinstance(type_,dict)
 	assert isinstance(side,Side)
 	assert isinstance(quantity,int)
+	assert isinstance(entity,str)
 	instrument = instrument.upper()
+	entity = entity.upper()
 
 	return {
 		'sym': instrument,
 		'price': type_,
 		'side': side,
 		'qty': quantity,
+		'acct': entity,
 	}
