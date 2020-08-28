@@ -40,12 +40,16 @@ class Piston:
 
 	@property
 	def quote(self):
-		"""Returns (bid,ask, bidsize, asksize)
+		"""Returns (bid,ask,last bidsize, asksize, lastsize, lasttime)
 		"""
 		bid, bidsize = sideQuote ( self.table[Side.Buy],  self._manager )
 		ask, asksize = sideQuote ( self.table[Side.Sell], self._manager )
-		self._quote = (bid, ask, bidsize, asksize)
-		return self._quote
+		try:
+			lastTx = self.txs[-1]
+			last, lastsize = lastTx['px'], lastTx['qty']
+		except:
+			last, lastsize = None, 0
+		return bid, ask, last, bidsize, asksize, lastsize
 
 
 	@property
@@ -118,7 +122,7 @@ class Piston:
 		# Update the accounts
 		self.accounts.exchange(
 			buyer  = order['acct'],
-			seller = order['sym'],
+			seller = other['acct'],
 			symbol = order['sym'],
 			qty    = tx['qty'] * (1 if side == Side.Buy else -1),
 			unitPx = price
@@ -154,7 +158,7 @@ class Piston:
 			side, price, time = Piston.extractIds(order)
 			# Decide whether this price should be used
 			newSpread = 1
-			bid, ask, _, _ = self.quote
+			bid, ask, _, _, _, _ = self.quote
 			marketPx = (ask if side == Side.Buy else bid)
 			
 			if price is None:

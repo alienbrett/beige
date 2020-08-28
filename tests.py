@@ -1,6 +1,8 @@
 import unittest
 import numpy as np
+from tqdm import tqdm
 import time
+import sys
 import random
 from decimal import *
 from exchange import *
@@ -375,5 +377,75 @@ def run():
 	
 
 
+def speed():
+	eng = Engine()
+	syms = ['spy','tsla','amd','gld','tax','blah','what?','gold','moon','ba','xxx']
+	nOrders = 20*1000
+	pctMarket = 0.2
+	verbose=False
+
+	import random
+	random.seed(0)
+
+	caps, orders = simulate.orderGen(
+		syms,
+		nOrders,
+		pctMarket,
+		useCaps = True
+	)
+
+	# Submit all market-maker orders
+	for o in caps:
+		eng.submit(o)
+
+	print("Starting engine")
+
+	t1 = time.time()
+
+	for o in tqdm(orders):
+	# for o in orders:
+		bid, ask, last, _, _, _ = eng.quote(o['sym'])
+		mid = (bid+ask)/Decimal(2)
+		if last is None:
+			px = mid
+		else:
+			px = last
+		try:
+			o['price']['price'] += px
+		except:
+			pass
+		eng.submit(o)
+		if verbose:
+			print(o)
+			print(eng.quotes)
+			print()
+
+	t2 = time.time()
+	
+	print("Done. Processed {0} orders in {1:.2f}s, {1:.2f}us each".format(
+		nOrders,
+		(t2 - t1),
+		1000* 1000 * (t2 - t1) / nOrders
+	))
+
+	print("TRANSACTIONS:")
+	print(eng.txs)
+
+	print("QUOTES:")
+	print(eng.quotes)
+
+	print("ENDING ACCOUNT HOLDINGS")
+	print(eng.accounts.df)
+		
+
+	
+
+
 if __name__ == '__main__':
-	run()
+
+	# Run the standard stuff
+	if len(sys.argv) == 1:
+		run()
+	# Run the performance tests
+	elif len(sys.argv) == 2 and sys.argv[1] == 'speed':
+		speed()
