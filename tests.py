@@ -161,7 +161,7 @@ class TestEngine ( unittest.TestCase ):
 					)
 
 		txs =  [ { k:v for k,v in tx.items() if k != 'time' } for tx in eng.piston(sym)().txs ]
-		print(eng.accounts.df)
+		# print(eng.accounts.df)
 
 		i = 0
 		for price, sizes in prices:
@@ -377,10 +377,11 @@ def run():
 	
 
 
-def speed():
+def speed(profile=False):
+		
 	eng = Engine()
 	syms = ['spy','tsla','amd','gld','tax','blah','what?','gold','moon','ba','xxx']
-	nOrders = 20*1000
+	nOrders = 8*1000
 	pctMarket = 0.2
 	verbose=False
 
@@ -400,42 +401,54 @@ def speed():
 
 	print("Starting engine")
 
-	t1 = time.time()
 
-	for o in tqdm(orders):
-	# for o in orders:
-		bid, ask, last, _, _, _ = eng.quote(o['sym'])
-		mid = (bid+ask)/Decimal(2)
-		if last is None:
-			px = mid
-		else:
-			px = last
-		try:
-			o['price']['price'] += px
-		except:
-			pass
-		eng.submit(o)
-		if verbose:
-			print(o)
-			print(eng.quotes)
-			print()
+	def f():
+		t1 = time.time()
 
-	t2 = time.time()
+		for o in orders:
+			bid, ask, last, _, _, _ = eng.quote(o['sym'])
+			mid = (bid+ask)/Decimal(2)
+			if last is None:
+				px = mid
+			else:
+				px = last
+			try:
+				o['price']['price'] += px
+			except:
+				pass
+			eng.submit(o)
+			if verbose:
+				print(o)
+				print(eng.quotes)
+				print()
+
+		t2 = time.time()
+		print("Done. Processed {0} orders in {1:.2f}s, {2:.2f}us each".format(
+			nOrders,
+			(t2 - t1),
+			1000* 1000 * (t2 - t1) / nOrders
+		))
+
+		# return t2,t1
 	
-	print("Done. Processed {0} orders in {1:.2f}s, {1:.2f}us each".format(
-		nOrders,
-		(t2 - t1),
-		1000* 1000 * (t2 - t1) / nOrders
-	))
+	if profile:
+		import cProfile
+		import pstats
+		with cProfile.Profile() as pr:
+			f()
+		ps = pstats.Stats(pr).sort_stats('time')
+		ps.print_stats()
+	else:
+		f()
 
-	print("TRANSACTIONS:")
-	print(eng.txs)
+		print("TRANSACTIONS:")
+		print(eng.txs)
 
-	print("QUOTES:")
-	print(eng.quotes)
+		print("QUOTES:")
+		print(eng.quotes)
 
-	print("ENDING ACCOUNT HOLDINGS")
-	print(eng.accounts.df)
+		print("ENDING ACCOUNT HOLDINGS")
+		print(eng.accounts.df)
 		
 
 	
@@ -447,5 +460,8 @@ if __name__ == '__main__':
 	if len(sys.argv) == 1:
 		run()
 	# Run the performance tests
-	elif len(sys.argv) == 2 and sys.argv[1] == 'speed':
-		speed()
+	elif len(sys.argv) == 2:
+		if sys.argv[1] == 'speed':
+			speed()
+		elif sys.argv[1] == 'profile':
+			speed(profile=True)
