@@ -319,7 +319,7 @@ class TestLattice ( unittest.TestCase ):
 	def test_insert (self):
 		l = lattice.Lattice()
 
-		# print("testing insert")
+		print("testing insert")
 		t1 = time.time()
 		n = 10*1000
 		k = 900
@@ -335,6 +335,7 @@ class TestLattice ( unittest.TestCase ):
 		self.assertTrue(
 			all(vals[i] <= vals[i+1] for i in range(len(vals) - 1))
 		)
+
 	
 
 
@@ -357,6 +358,7 @@ class TestLattice ( unittest.TestCase ):
 				l.get(x,y),
 				z
 			)
+			
 
 
 

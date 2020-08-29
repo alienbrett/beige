@@ -32,6 +32,8 @@ class Lattice:
 		self.bins = []
 
 
+
+
 	def _find(self, id1):
 		"""Returns tuple (x,y), where:
 			x is 0 if id1 is found, or 1 if id1 isn't an item.
@@ -39,13 +41,14 @@ class Lattice:
 		"""
 		y = len(self.bins)
 		for i in range(y):
-			# print("bin[{0}] vs {1}".format(self.bins[i][0],id1))
 			if self.bins[i][0] >= id1:
 				if self.bins[i][0] == id1:
 					return (0,i)
 				else:
 					return (1,i)
 		return (1,-1)
+
+
 
 
 	def secondLevelInsert(self, whichBin, id2, obj):
@@ -63,26 +66,28 @@ class Lattice:
 		except:
 			# We can just append at the back
 			whichBin[1].append(ball)
-			
+
+
+
 
 
 	def insert(self, id1, id2, obj):
 		"""Inserts (or overwrites) an object with the given ID's
 		"""
-		# print("Finding {0}x{1}".format(id1, id2))
 		x,y = self._find(id1)
-		# print(x,y)
 		if x == 1:
 			# Item was not found
+			z = [id1, []]
 			if y == -1:
 				# Just append to the back of the list
-				self.bins.append([id1, []])
+				self.bins.append(z)
 			else:
-				self.bins.insert(y,[id1, []])
-			# print(self.bins)
+				self.bins.insert(y,z)
 		# insert there
 		self.secondLevelInsert( self.bins[y], id2, obj )
 		
+
+
 
 	def __access(self, id1, id2, f, ifNotFound=None):
 		x,y = self._find(id1)
@@ -92,9 +97,18 @@ class Lattice:
 			try:
 				j = next( i for i,o in enumerate(self.bins[y][1]) if o[0] >= id2 )
 
+				# Now we have the correct version
 				if self.bins[y][1][j][0] == id2:
-					# Return the object we just found
-					return f( self.bins[y][1], j)
+
+					# Apply the function
+					result = f( self.bins[y][1], j)
+
+					# Should we close down this empty bin?
+					if len(self.bins[y][1]) == 0:
+						self.bins.pop(y)
+
+					# Return the value of f
+					return result
 
 			except:
 				return ifNotFound
@@ -109,9 +123,14 @@ class Lattice:
 			return l.pop(pos)[1]
 
 		return self.__access(id1, id2, f, ifNotFound)
+
+
 	
 	def __len__(self):
 		return sum( len(b[1]) for b in self.bins )
+
+
+
 
 
 	def get(self, id1, id2, ifNotFound=None):

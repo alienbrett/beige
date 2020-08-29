@@ -35,6 +35,7 @@ class MarketQuote:
 		j = self.info[side].get(px,0) + qty
 		self.info[side][px] = j
 
+
 	@property
 	def quote(self):
 		try:
