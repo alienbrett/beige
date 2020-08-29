@@ -32,6 +32,8 @@ class Lattice:
 		self.bins = []
 
 
+
+
 	def _find(self, id1):
 		"""Returns tuple (x,y), where:
 			x is 0 if id1 is found, or 1 if id1 isn't an item.
@@ -46,6 +48,8 @@ class Lattice:
 				else:
 					return (1,i)
 		return (1,-1)
+
+
 
 
 	def secondLevelInsert(self, whichBin, id2, obj):
@@ -63,26 +67,35 @@ class Lattice:
 		except:
 			# We can just append at the back
 			whichBin[1].append(ball)
+
+		# Put the metrics at the back of the list
+		# Make sure its the right length
+		# if len(whichBin) == 2:
+		# 	for ballId, ballObj in 
+		# 	whichBin.append([])
+		# whichBin[
 			
+
+
 
 
 	def insert(self, id1, id2, obj):
 		"""Inserts (or overwrites) an object with the given ID's
 		"""
-		# print("Finding {0}x{1}".format(id1, id2))
 		x,y = self._find(id1)
-		# print(x,y)
 		if x == 1:
 			# Item was not found
+			z = [id1, []]
 			if y == -1:
 				# Just append to the back of the list
-				self.bins.append([id1, []])
+				self.bins.append(z)
 			else:
-				self.bins.insert(y,[id1, []])
-			# print(self.bins)
+				self.bins.insert(y,z)
 		# insert there
 		self.secondLevelInsert( self.bins[y], id2, obj )
 		
+
+
 
 	def __access(self, id1, id2, f, ifNotFound=None):
 		x,y = self._find(id1)
@@ -118,9 +131,14 @@ class Lattice:
 			return l.pop(pos)[1]
 
 		return self.__access(id1, id2, f, ifNotFound)
+
+
 	
 	def __len__(self):
 		return sum( len(b[1]) for b in self.bins )
+
+
+
 
 
 	def get(self, id1, id2, ifNotFound=None):

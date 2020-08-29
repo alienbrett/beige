@@ -1,23 +1,9 @@
 import weakref
 import time as t
+from .metric import MarketQuote
 from .classes import *
 from .lattice import Lattice
 from .manager import OrderManager
-
-
-def sideQuote ( lattice, manager ):
-	price, size = None, 0
-	for oid in lattice:
-		o = manager.get(oid)
-		p = o['price']['price']
-		if price is None:
-			price = p
-		elif price != p:
-			break
-
-		size += o['qty']
-	return price, size
-		
 
 
 class Piston:
@@ -33,17 +19,45 @@ class Piston:
 		# Outstanding orders
 		self.table = {
 			Side.Buy  : Lattice(),
-			Side.Sell : Lattice()
+			Side.Sell : Lattice(),
 		}
+		# Quickly generates new quotes
+		self._metrics = MarketQuote()
 
+
+	def _sideQuote ( self, side, fast=False ):
+		if fast:
+			prefix = 'bid' if side == Side.Buy else 'ask'
+			price =  self._quoteVals.get( prefix, None )
+			size = self._quoteVals.get( prefix+'s',0 )
+			return price, size
+		else:
+			price, size = None, 0
+			for oid in self.table[side]:
+				o = self._manager.get(oid)
+				p = o['price']['price']
+				if price is None:
+					price = p
+				elif price != p:
+					break
+
+				size += o['qty']
+			return price, size
+		
 
 
 	@property
-	def quote(self):
+	def quote(self, fast=True):
 		"""Returns (bid,ask,last bidsize, asksize, lastsize, lasttime)
 		"""
-		bid, bidsize = sideQuote ( self.table[Side.Buy],  self._manager )
-		ask, asksize = sideQuote ( self.table[Side.Sell], self._manager )
+		# print("QUOTE")
+		bid, ask, bidsize, asksize = self._metrics.quote
+		# print(bid,ask)
+		if not fast:
+			bid, bidsize = self._sideQuote ( Side.Buy )
+			ask, asksize = self._sideQuote ( Side.Sell )
+			# print(bid,ask)
+
 		try:
 			lastTx = self.txs[-1]
 			last, lastsize = lastTx['px'], lastTx['qty']
@@ -89,8 +103,15 @@ class Piston:
 		try:
 			side, price, time = self.extractIds( o )
 			if side is not None:
+
 				# Remove this from our book
 				resultId = self.table[side].pop(price, time)
+
+				# Change our quote book
+				if price is not None:
+					qty = o['qty']
+					self._metrics.removeLimit( side, price, qty )
+
 				# Update the statuses
 				self._manager.cancel(orderid)
 		except:
@@ -128,6 +149,13 @@ class Piston:
 			unitPx = price
 		)
 
+		# Remove this order from the book
+		self._metrics.removeLimit(
+			otherside,
+			other['price']['price'],
+			tx['qty']
+		)
+
 		# Make sure we log this 
 		self.txs.append(tx)
 
@@ -159,6 +187,7 @@ class Piston:
 			# Decide whether this price should be used
 			newSpread = 1
 			bid, ask, _, _, _, _ = self.quote
+			# print(bid,ask)
 			marketPx = (ask if side == Side.Buy else bid)
 			
 			if price is None:
@@ -183,6 +212,15 @@ class Piston:
 			else:
 				# Then we should insert
 				side, price, time = Piston.extractIds(order)
+
+				# update our quote book
+				self._metrics.addLimit(
+					order['side'],
+					price,
+					order['qty']
+				)
+
+				# Insert this limit into the book
 				self.table[side].insert ( price, time, orderid )
 				break
 

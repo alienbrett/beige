@@ -251,6 +251,7 @@ class TestEngine ( unittest.TestCase ):
 	def test_market (self):
 		"""Test placement of market orders
 		"""
+		# print("QHAT?")
 		# print("Test market")
 		sym = 'SPY'
 		eng = Engine()
@@ -292,9 +293,20 @@ class TestEngine ( unittest.TestCase ):
 			{'status': 'filled',  'filled': 12, 'averagepx': Decimal('9.667')},
 		]
 		
+		# print([
+		# 	{
+		# 		k:v
+		# 		for k,v in eng.status(oid).items()
+		# 		if k in ('status','filled','averagepx')
+		# 	}
+		# 	for oid in ids
+		# ])
 		for oid, valid in zip(ids,corrects):
+			# print()
+			j = { k:v for k,v in eng.status(oid).items() if k in ('status','filled','averagepx') }
+			# print(j)
 			self.assertEqual(
-				{ k:v for k,v in eng.status(oid).items() if k in ('status','filled','averagepx') },
+				j,
 				valid
 			)
 
@@ -381,7 +393,7 @@ def speed(profile=False):
 		
 	eng = Engine()
 	syms = ['spy','tsla','amd','gld','tax','blah','what?','gold','moon','ba','xxx']
-	nOrders = 8*1000
+	nOrders = 100*1000
 	pctMarket = 0.2
 	verbose=False
 
@@ -405,7 +417,7 @@ def speed(profile=False):
 	def f():
 		t1 = time.time()
 
-		for o in orders:
+		for o in tqdm(orders):
 			bid, ask, last, _, _, _ = eng.quote(o['sym'])
 			mid = (bid+ask)/Decimal(2)
 			if last is None:
