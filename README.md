@@ -1,5 +1,7 @@
 # Python native Exchange engine
 
+![Website](https://img.shields.io/website?up_message=up&url=https%3A%2F%2Fgithub.com%2Falienbrett%2Fbeige%2F)![PyPI](https://img.shields.io/pypi/v/beige)![PyPI - License](https://img.shields.io/pypi/l/beige)![GitHub issues](https://img.shields.io/github/issues/alienbrett/beige)
+
 ### Beige
 
 Why Beige?
