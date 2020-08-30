@@ -37,10 +37,7 @@ class Engine:
 	
 
 	def quote(self, sym):
-		p = self.pistons.get(sym.upper(), None)
-		if p is None:
-			return None
-		return p.quote
+		return self.piston(sym.upper()).quote
 	
 
 	@property
