@@ -1,11 +1,12 @@
 import unittest
 import numpy as np
-from tqdm import tqdm
+import cProfile
+import pstats
 import time
 import sys
 import random
 from decimal import *
-from exchange import *
+from beige import *
 
 class TestOrders ( unittest.TestCase ):
 	def test_order_pricing (self):
@@ -293,14 +294,7 @@ class TestEngine ( unittest.TestCase ):
 			{'status': 'filled',  'filled': 12, 'averagepx': Decimal('9.667')},
 		]
 		
-		# print([
-		# 	{
-		# 		k:v
-		# 		for k,v in eng.status(oid).items()
-		# 		if k in ('status','filled','averagepx')
-		# 	}
-		# 	for oid in ids
-		# ])
+
 		for oid, valid in zip(ids,corrects):
 			# print()
 			j = { k:v for k,v in eng.status(oid).items() if k in ('status','filled','averagepx') }
@@ -391,16 +385,14 @@ def run():
 	
 
 
-def speed(profile=False):
-		
+def speed(profile=False, syms = None, nOrders=15*1000, pctMarket=0.2, seed=0 ):
+	"""This was hacked together, I know it's bad
+	"""
 	eng = Engine()
-	syms = ['spy','tsla','amd','gld','tax','blah','what?','gold','moon','ba','xxx']
-	nOrders = 100*1000
-	pctMarket = 0.2
-	verbose=False
+	if syms is None:
+		syms = ['spy','tsla','amd','gld','tax','blah','what?','gold','moon','ba','xxx']
 
-	import random
-	random.seed(0)
+	random.seed(seed)
 
 	caps, orders = simulate.orderGen(
 		syms,
@@ -419,7 +411,13 @@ def speed(profile=False):
 	def f():
 		t1 = time.time()
 
-		for o in tqdm(orders):
+		try:
+			from tqdm import tqdm
+			x = tqdm(orders)
+		except:
+			x = orders
+
+		for o in x:
 			bid, ask, last, _, _, _ = eng.quote(o['sym'])
 			mid = (bid+ask)/Decimal(2)
 			if last is None:
@@ -431,10 +429,6 @@ def speed(profile=False):
 			except:
 				pass
 			eng.submit(o)
-			if verbose:
-				print(o)
-				print(eng.quotes)
-				print()
 
 		t2 = time.time()
 		print("Done. Processed {0} orders in {1:.2f}s, {2:.2f}us each".format(
@@ -446,8 +440,6 @@ def speed(profile=False):
 		# return t2,t1
 	
 	if profile:
-		import cProfile
-		import pstats
 		with cProfile.Profile() as pr:
 			f()
 		ps = pstats.Stats(pr).sort_stats('time')

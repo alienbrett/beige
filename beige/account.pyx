@@ -1,8 +1,6 @@
 import weakref
 
 
-
-
 class AccountManager:
 	def __init__(self):
 		self.accounts = {}
@@ -29,6 +27,7 @@ class AccountManager:
 		"""Exchange qty shares of symbol, for unitPx each.
 		Changes '$' by the opposite sign of this quantity.
 		"""
+		account = account.upper()
 		self.modify(account, symbol, qty)
 		self.modify(account, '$', -1 * qty * unitPx)
 	
@@ -36,12 +35,15 @@ class AccountManager:
 	def init(self, account:str, holdings:dict):
 		"""Initialize an account with some set of holdings.
 		"""
+		account = account.upper()
 		for k, v in holdings.items():
 			self.modify( account, k, v )
 
 
 	def exchange ( self, buyer:str, seller:str, symbol:str, qty:float, unitPx:float ):
 		# Update the accounts
+		buyer = buyer.upper()
+		seller = seller.upper()
 		for entity, modifier in ( (buyer, 1), (seller, -1) ):
 			self.tx(
 				account = entity,

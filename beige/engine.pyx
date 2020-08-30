@@ -1,7 +1,7 @@
 import weakref
 import uuid
-import time as t
 import pandas as pd
+import time as t
 from .classes import *
 from .account import AccountManager
 from .piston import Piston
